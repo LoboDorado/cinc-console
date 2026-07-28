@@ -1,11 +1,19 @@
 // @vitest-environment node
-import { expect, test, vi } from "vitest";
+import { expect, test, vi, beforeEach } from "vitest";
 import { CincError } from "./errors";
 
 const req = vi.fn();
+const getConfigMock = vi.fn();
+
 vi.mock("./client", () => ({ cincRequest: (...a: unknown[]) => req(...a) }));
+vi.mock("../config", () => ({ getConfig: () => getConfigMock() }));
 
 import { authenticateUser } from "./auth";
+
+beforeEach(() => {
+  req.mockReset();
+  getConfigMock.mockReturnValue({ authActor: undefined });
+});
 
 test("returns the user (with display_name) on success", async () => {
   req.mockResolvedValueOnce({ user: { username: "alice", display_name: "Alice A" } });
@@ -39,4 +47,34 @@ test("rethrows non-401 errors", async () => {
   await expect(authenticateUser("alice", "pw")).rejects.toMatchObject({
     status: 500,
   });
+});
+
+test("signs as authActor when configured", async () => {
+  getConfigMock.mockReturnValue({ authActor: "pivotal" });
+  req.mockResolvedValueOnce({ user: { username: "alice" } });
+
+  await authenticateUser("alice", "pw");
+
+  expect(req).toHaveBeenCalledTimes(1);
+  expect(req).toHaveBeenCalledWith(
+    expect.objectContaining({
+      user: "pivotal",
+      path: "/authenticate_user",
+      body: { username: "alice", password: "pw" },
+    }),
+  );
+});
+
+test("signs as username when authActor is not configured", async () => {
+  getConfigMock.mockReturnValue({ authActor: undefined });
+  req.mockResolvedValueOnce({ user: { username: "alice" } });
+
+  await authenticateUser("alice", "pw");
+
+  expect(req).toHaveBeenCalledWith(
+    expect.objectContaining({
+      user: "alice",
+      path: "/authenticate_user",
+    }),
+  );
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/cinc/auth";
-import { getSession } from "@/lib/session";
+import { getSession, shouldUseSecureCookies } from "@/lib/session";
 import { log } from "@/lib/log";
 
 export async function POST(req: NextRequest) {
@@ -28,7 +28,25 @@ export async function POST(req: NextRequest) {
   session.username = username;
   session.displayName = authUser.display_name || username;
   session.loginAt = Date.now();
-  await session.save();
+
+  const secureCookie = await shouldUseSecureCookies();
+  try {
+    await session.save();
+  } catch (err) {
+    log.error("login.session-save-failed", { user: username, error: String(err) });
+    return NextResponse.json(
+      { error: "session creation failed" },
+      { status: 500 },
+    );
+  }
+  
   log.info("login.success", { user: username });
+
+  // Next.js will attach cookies mutated during this request to the response.
+  log.info("login.cookie-set", {
+    user: username,
+    cookieName: "cinc_console",
+    secure: secureCookie,
+  });
   return NextResponse.json({ ok: true });
 }

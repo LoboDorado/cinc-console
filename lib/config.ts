@@ -12,6 +12,8 @@ const schema = z.object({
   CINC_SSL_NO_VERIFY: z.enum(["true", "false"]).optional(),
   SESSION_TTL_SECONDS: z.coerce.number().optional(),
   CHEF_VERSION: z.string().optional(),
+  // Optional actor for POST /authenticate_user fallback when impersonated user gets 403
+  CINC_AUTH_ACTOR: z.string().optional(),
 });
 
 export type Config = {
@@ -22,6 +24,7 @@ export type Config = {
   sslNoVerify: boolean;
   sessionTtlSeconds: number;
   chefVersion: string;
+  authActor?: string;
 };
 
 function readPem(path: string, label: string): string {
@@ -67,6 +70,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     sslNoVerify: e.CINC_SSL_NO_VERIFY === "true",
     sessionTtlSeconds: e.SESSION_TTL_SECONDS ?? 28800,
     chefVersion: e.CHEF_VERSION ?? "16.0.0",
+    authActor: e.CINC_AUTH_ACTOR,
   };
 }
 

@@ -63,3 +63,13 @@ test("errors clearly when the key file is unreadable", () => {
     loadConfig({ ...base, CINC_WEBUI_KEY: undefined, CINC_WEBUI_KEY_FILE: "/no/such.pem" }),
   ).toThrow(/CINC_WEBUI_KEY_FILE could not read/);
 });
+
+test("parses optional authActor for authenticate_user fallback", () => {
+  const c = loadConfig({ ...base, CINC_AUTH_ACTOR: "pivotal" });
+  expect(c.authActor).toBe("pivotal");
+});
+
+test("authActor is undefined when not provided", () => {
+  const c = loadConfig(base);
+  expect(c.authActor).toBeUndefined();
+});
