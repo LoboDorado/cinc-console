@@ -1,0 +1,9 @@
+# Developer-local Helm overrides.
+# Copy to values-local.yaml (gitignored) and adjust for your environment.
+
+# Example: private registry pull secret in your namespace.
+imagePullSecrets:
+  - name: artifactory-token
+
+# Example: local/dev runtime mode.
+nodeEnv: "development"

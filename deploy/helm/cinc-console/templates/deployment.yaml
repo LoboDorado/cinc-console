@@ -66,9 +66,11 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
         - name: tmp
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: 1Gi
         - name: next-cache
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: 1Gi
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

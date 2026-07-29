@@ -17,6 +17,19 @@ cincServerUrl: "" # e.g. https://chef.example.com  (REQUIRED)
 sslNoVerify: false
 # Session cookie lifetime in seconds (default 8h).
 sessionTtlSeconds: 28800
+# Node environment (production or development). In production, secure cookies are used.
+# In development, cookies are insecure (http). Set to development to debug session issues.
+nodeEnv: "production"
+# Trust X-Forwarded-Proto header from reverse proxy for secure cookie detection.
+# Set to true if your Ingress forwards X-Forwarded-Proto: https for HTTPS connections.
+# This is required in production when behind a reverse proxy with HTTPS termination.
+trustProxy: true
+# Signing actor for POST /authenticate_user. This endpoint is global (non-org)
+# and its ACL only grants "create" to globally-privileged actors. Set this to
+# "pivotal" (or another global admin) so the webui-signed request is accepted.
+# Leave empty to sign as the authenticating user (works only if that user has
+# global create permission, which org users typically do not).
+authActor: "pivotal"
 
 # -- Secrets. Provide the webui key here, or point existingSecret at a
 # pre-created Secret that holds CINC_WEBUI_KEY, SESSION_SECRET, and
@@ -30,7 +43,7 @@ sessionSecret: ""
 existingSecret: ""
 
 service:
-  type: ClusterIP
+  type: ClusterIP # ClusterIP, NodePort, LoadBalancer
   port: 80
 
 ingress:

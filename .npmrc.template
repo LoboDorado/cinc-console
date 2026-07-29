@@ -1,0 +1,25 @@
+# npm Registry Configuration Template
+# 
+# By default (no changes needed), this file uses the public NPM registry.
+# 
+# To use a different registry, copy this file to .npmrc and uncomment ONE of the examples below.
+# The .npmrc file is in .gitignore to prevent accidental credential commits.
+# It is only used during Docker build and is not included in the final image.
+
+# ============================================================================
+# DEFAULT: Public NPM Registry (no configuration needed)
+# ============================================================================
+# Just build as-is. No changes required.
+
+# ============================================================================
+# EXAMPLE 1: Internal/Private NPM Registry (NO authentication required)
+# ============================================================================
+# Uncomment if your internal repo doesn't require authentication:
+# registry=https://artifactory.example.com/artifactory/api/npm/npm-vir/
+
+# ============================================================================
+# EXAMPLE 2: Internal/Private NPM Registry (WITH authentication token)
+# ============================================================================
+# Uncomment if your internal repo requires authentication, and replace username/token:
+# registry=https://artifactory.example.com/artifactory/api/npm/npm-vir/
+# //artifactory.example.com/artifactory/api/npm/npm-vir/:_authToken=TOKEN

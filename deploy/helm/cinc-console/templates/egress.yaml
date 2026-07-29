@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-egress
+  labels:
+    app.kubernetes.io/name: cinc-console
+spec:
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+  - ports:
+    - port: 80
+      protocol: TCP
+    - port: 3000
+      protocol: TCP
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 80
+      protocol: TCP
+    - port: 3000
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cinc-console
