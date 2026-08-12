@@ -3,12 +3,14 @@ import Image from "next/image";
 import { currentSession } from "@/lib/guard";
 import { getUser } from "@/lib/cinc/users";
 import { safeGet, explainRead } from "@/lib/cinc/safe-get";
+import { getConfig } from "@/lib/config";
 import { UserMenu } from "@/components/user-menu";
 import { ProfileForm } from "./profile-form";
 
 export default async function ProfilePage() {
   const { username, displayName } = await currentSession();
   const res = await safeGet(() => getUser(username));
+  const { authMode } = getConfig();
 
   return (
     <main className="min-h-screen">
@@ -38,7 +40,7 @@ export default async function ProfilePage() {
         {"error" in res ? (
           <p className="text-sm text-danger">{explainRead(res.error)}</p>
         ) : (
-          <ProfileForm initial={res.data} />
+          <ProfileForm initial={res.data} authMode={authMode} />
         )}
       </div>
     </main>

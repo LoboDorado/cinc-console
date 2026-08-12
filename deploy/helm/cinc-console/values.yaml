@@ -31,9 +31,44 @@ trustProxy: true
 # global create permission, which org users typically do not).
 authActor: "pivotal"
 
+# -- How login credentials are verified: "local" (default) asks the Cinc
+# server's own /authenticate_user; "ldap" binds against an external
+# directory instead. Either way, the submitted username must already exist
+# as a Cinc user object - LDAP only replaces the password check, it never
+# provisions Cinc users.
+authMode: "local" # "local" or "ldap"
+
+# -- LDAP bind authentication. Only used when authMode is "ldap".
+ldap:
+  # LDAP/AD server URL, e.g. ldaps://dc1.example.com:636 (REQUIRED if authMode=ldap)
+  url: ""
+  # Search base DN, e.g. dc=example,dc=com (REQUIRED if authMode=ldap)
+  baseDn: ""
+  # Service-account bind DN for the search phase. Leave bindDn and
+  # bindPassword both empty for an anonymous search bind.
+  bindDn: ""
+  # Service-account bind password (secret). Provide here, or via
+  # existingSecret's LDAP_BIND_PASSWORD key.
+  bindPassword: ""
+  # Search filter template. {{username}} is replaced with the escaped,
+  # submitted username. Default suits OpenLDAP; Active Directory typically
+  # uses (sAMAccountName={{username}}).
+  userFilter: "(uid={{username}})"
+  # Search timeout in milliseconds.
+  searchTimeoutMs: 5000
+  # Skip TLS verification against the directory (dev/test only).
+  tlsNoVerify: false
+  # A PEM CA bundle to trust for the directory, if different from the
+  # cinc server's caCert above (optional).
+  caCert: ""
+  # The NetworkPolicy (templates/egress.yaml) always allows egress to 389 and
+  # 636 when authMode is "ldap". Add ports here if your directory listens on
+  # something else, e.g. a non-standard LDAPS port.
+  extraNetworkPolicyPorts: []
+
 # -- Secrets. Provide the webui key here, or point existingSecret at a
 # pre-created Secret that holds CINC_WEBUI_KEY, SESSION_SECRET, and
-# optionally CINC_CA_CERT.
+# optionally CINC_CA_CERT, LDAP_BIND_PASSWORD, LDAP_CA_CERT.
 webuiKey: "" # contents of webui_priv.pem (REQUIRED unless existingSecret set)
 # A PEM CA bundle to trust for a self-signed cinc server (optional).
 caCert: ""

@@ -7,3 +7,12 @@ imagePullSecrets:
 
 # Example: local/dev runtime mode.
 nodeEnv: "development"
+
+# Example: point at your own directory for LDAP bind auth (see
+# values-example.yaml for the full set of ldap.* options).
+authMode: ldap
+ldap:
+  url: ldaps://dc1.example.com:636
+  baseDn: dc=example,dc=com
+  bindDn: cn=svc-cinc-console,ou=service-accounts,dc=example,dc=com
+  bindPassword: "" # don't commit a real password here - use --set or existingSecret

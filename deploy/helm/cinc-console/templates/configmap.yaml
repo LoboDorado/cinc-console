@@ -15,3 +15,16 @@ data:
   {{- if .Values.authActor }}
   CINC_AUTH_ACTOR: {{ .Values.authActor | quote }}
   {{- end }}
+  AUTH_MODE: {{ .Values.authMode | default "local" | quote }}
+  {{- if eq .Values.authMode "ldap" }}
+  LDAP_URL: {{ required "ldap.url is required when authMode=ldap" .Values.ldap.url | quote }}
+  LDAP_BASE_DN: {{ required "ldap.baseDn is required when authMode=ldap" .Values.ldap.baseDn | quote }}
+  {{- if .Values.ldap.bindDn }}
+  LDAP_BIND_DN: {{ .Values.ldap.bindDn | quote }}
+  {{- end }}
+  {{- /* Backticks: a literal {{username}} here would otherwise be parsed as
+         a Helm template action, not emitted as text. */}}
+  LDAP_USER_FILTER: {{ .Values.ldap.userFilter | default `(uid={{username}})` | quote }}
+  LDAP_SEARCH_TIMEOUT_MS: {{ .Values.ldap.searchTimeoutMs | default 5000 | quote }}
+  LDAP_TLS_NO_VERIFY: {{ .Values.ldap.tlsNoVerify | default false | quote }}
+  {{- end }}

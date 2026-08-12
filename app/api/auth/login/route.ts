@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateUser } from "@/lib/cinc/auth";
+import { authenticate } from "@/lib/cinc/auth";
+import { getConfig } from "@/lib/config";
 import { getSession, shouldUseSecureCookies } from "@/lib/session";
 import { log } from "@/lib/log";
 
@@ -15,9 +16,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing credentials" }, { status: 400 });
   }
 
-  const authUser = await authenticateUser(username, password);
-  if (!authUser) {
-    log.warn("login.failed", { user: username });
+  const { authMode } = getConfig();
+  const authResult = await authenticate(username, password);
+  if (!authResult) {
+    log.warn("login.failed", { user: username, authMode });
     return NextResponse.json(
       { error: "invalid username or password" },
       { status: 401 },
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const session = await getSession();
   session.username = username;
-  session.displayName = authUser.display_name || username;
+  session.displayName = authResult.displayName || username;
   session.loginAt = Date.now();
 
   const secureCookie = await shouldUseSecureCookies();
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     );
   }
   
-  log.info("login.success", { user: username });
+  log.info("login.success", { user: username, authMode });
 
   // Next.js will attach cookies mutated during this request to the response.
   log.info("login.cookie-set", {
