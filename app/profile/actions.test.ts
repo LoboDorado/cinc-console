@@ -16,7 +16,10 @@ const { getUser, putUser } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/cinc/users", () => ({ getUser, putUser }));
 
-import { saveProfile, changePassword, type ProfileDetails } from "./actions";
+const { getConfigMock } = vi.hoisted(() => ({ getConfigMock: vi.fn() }));
+vi.mock("@/lib/config", () => ({ getConfig: () => getConfigMock() }));
+
+import { saveProfile, changePassword } from "./actions";
 
 beforeEach(() => {
   getUser.mockReset();
@@ -24,6 +27,7 @@ beforeEach(() => {
   session.save.mockReset();
   session.displayName = "";
   getUser.mockResolvedValue({ username: "anna", email: "old@x", public_key: "K" });
+  getConfigMock.mockReturnValue({ authMode: "local" });
 });
 
 test("saveProfile merges edits onto the current record", async () => {
@@ -50,6 +54,14 @@ test("changePassword merges a password onto the current record", async () => {
 test("changePassword rejects a short password without calling the server", async () => {
   await expect(changePassword("123")).resolves.toEqual({
     error: "password must be at least 6 characters",
+  });
+  expect(putUser).not.toHaveBeenCalled();
+});
+
+test("changePassword is rejected outright when AUTH_MODE=ldap", async () => {
+  getConfigMock.mockReturnValue({ authMode: "ldap" });
+  await expect(changePassword("s3cret!")).resolves.toEqual({
+    error: "password is managed by your organization's directory",
   });
   expect(putUser).not.toHaveBeenCalled();
 });

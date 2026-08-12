@@ -21,3 +21,17 @@ only what their server ACLs allow.
 WARNING: no webuiKey was provided. Set webuiKey (the contents of
 webui_priv.pem) or point existingSecret at a Secret that contains it.
 {{- end }}
+
+{{- if eq .Values.authMode "ldap" }}
+
+LDAP bind authentication is enabled (authMode=ldap): logins are verified
+against {{ .Values.ldap.url }} instead of the Cinc server's own password
+check. The submitted username must already exist as a Cinc user object —
+LDAP never provisions one.
+{{- if and .Values.ldap.bindDn (not .Values.existingSecret) (not .Values.ldap.bindPassword) }}
+
+WARNING: ldap.bindDn is set but ldap.bindPassword is empty. Set
+ldap.bindPassword, or point existingSecret at a Secret that contains
+LDAP_BIND_PASSWORD, or clear ldap.bindDn too for an anonymous search bind.
+{{- end }}
+{{- end }}
