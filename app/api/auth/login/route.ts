@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateUser } from "@/lib/cinc/auth";
+import { authenticate } from "@/lib/cinc/auth";
+import { getConfig } from "@/lib/config";
 import { getSession, cookieSecure } from "@/lib/session";
 import { isCrossSite } from "@/lib/same-origin";
 import { log } from "@/lib/log";

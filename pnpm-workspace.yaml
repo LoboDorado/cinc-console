@@ -1,3 +1,9 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# Force patched versions of transitive packages whose parent pins a
+# vulnerable range — see CLAUDE.md's "Dependency overrides" section.
+overrides:
+  postcss@<8.5.18: ">=8.5.18"
+  sharp@<0.35.0: ">=0.35.0"

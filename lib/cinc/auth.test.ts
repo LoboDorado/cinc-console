@@ -24,7 +24,7 @@ vi.mock("../ldap/client", async (importOriginal) => {
   return { ...actual, ldapBind: (...a: unknown[]) => ldapBindMock(...a) };
 });
 
-import { authenticateUser } from "./auth";
+import { authenticateUser, authenticate } from "./auth";
 import { cincPath } from "./path";
 import { LdapAuthError } from "../ldap/client";
 

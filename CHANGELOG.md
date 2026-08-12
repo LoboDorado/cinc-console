@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## 0.6.0 - 2026-08-12
+## Unreleased
 
 ### Added
 
@@ -14,12 +14,40 @@ All notable changes to this project are documented in this file.
 - Hid the "Change password" action on the profile page for LDAP-authenticated
   users, since their password is managed by the directory.
 
+### Security
+
+- Hardened signed request paths: every path handed to `cincRequest` now goes
+  through `` cincPath`…` `` (`lib/cinc/path.ts`), a branded template tag that
+  rejects unsanitized names — route params and form fields feed directly into
+  the *signed* path, and Next decodes `%2F` back into a real `/` before a
+  handler ever sees it.
+- Added a login CSRF guard (`isCrossSite`, `lib/same-origin.ts`): routes that
+  mint or destroy a session now reject cross-site requests and require
+  `application/json`, closing the gap where SameSite=Lax stops a cross-site
+  POST from *sending* our cookie but not from *obtaining* one.
+- The session cookie's `Secure` flag is now decided by config
+  (`SESSION_COOKIE_SECURE`) only, never inferred from `X-Forwarded-Proto` or
+  `Referer`, which are attacker-supplied unless every path to the app strips
+  them.
+- Server Actions now allowlist the fields they write (see `pickProfileFields`
+  in `app/profile/actions.ts`) instead of spreading a caller's object onto a
+  webui-signed record — a Server Action's parameter type is erased at
+  runtime, so a caller can submit any object.
+- Added a Content-Security-Policy (nonce-based, set in `proxy.ts`) plus a
+  standard set of response security headers (`X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`,
+  `Permissions-Policy`, `Strict-Transport-Security`) on every route.
+
 ### Fixed
 
 - Fixed a Next.js production-build crash (`Cannot read properties of
   undefined (reading 'toLowerCase')`) on every LDAP login attempt, caused by
   Turbopack bundling `ldapjs`'s raw TLS/BER handling; `ldapjs` is now opted
   out of bundling via `serverExternalPackages`.
+- Fixed the Docker build's `deps` stage not copying `pnpm-workspace.yaml`,
+  which broke `pnpm install --frozen-lockfile` with
+  `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` for any build using a private registry
+  (`postcss`/`sharp` security overrides live there, not in `package.json`).
 
 ### Helm / Deployment
 
