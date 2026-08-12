@@ -20,8 +20,21 @@ with a server username/password; the app signs every server request with the
 - `make lint` — eslint. `make check` — test + lint + build (CI parity).
 - `make smoke` — build the image and verify `/api/healthz` (needs Docker).
 - `make helm-lint` / `make helm-template` — validate the chart.
+- `make release-pr VERSION=0.5.0` — open the release PR. See `RELEASING.md`.
 
 Run `make check` before committing.
+
+## Releasing
+
+Never hand-edit a version. `scripts/set-version.mjs` is the only thing that knows
+where the version lives (`package.json`, `Chart.yaml` `version` + `appVersion`);
+adding a fourth place means adding a target there plus a test. `values.yaml` keeps
+`image.tag: ""` on purpose so it defers to `.Chart.AppVersion`.
+
+`make release-pr VERSION=x.y.z` opens a PR with the bump and a generated
+CHANGELOG section; merging it tags, publishes the Release, and builds the image
+from the tagged commit. Two `set-version.mjs --check` guards refuse to tag or
+build a tree whose versions disagree with the tag. Full flow in `RELEASING.md`.
 
 ## This is Next.js 16 — not the one in your training data
 
@@ -80,6 +93,16 @@ permission" (it never substitutes its own check).
   (a version/revision or the whole object). Editing cookbook/policy content
   and cookbook uploads are out of scope. `_default` environment is read-only.
 
+## Dependency overrides
+
+`package.json` `pnpm.overrides` forces patched versions of transitive packages
+whose parent pins a vulnerable range — currently `postcss` and `sharp`, both
+pinned by `next` (`postcss 8.4.31` exactly, `sharp ^0.34.5`), so no `next`
+upgrade fixes them. Each override is scoped to the vulnerable range
+(`"postcss@<8.5.18": ">=8.5.18"`), so it stops applying once upstream catches
+up. Drop an entry when `next` bumps its own pin past the advisory; check with
+`pnpm why <pkg>` and `pnpm audit`.
+
 ## Accessibility
 
 **We comply with [WCAG 2.2 level AA](https://www.w3.org/TR/WCAG22/) — treat it
@@ -114,7 +137,32 @@ feature is not done until it works with a keyboard and a screen reader. Concrete
 
 Required env (validated at boot, fail-fast): `CINC_SERVER_URL`,
 `CINC_WEBUI_KEY` (PEM), `SESSION_SECRET` (32+ chars). Optional: `CINC_CA_CERT`,
-`CINC_SSL_NO_VERIFY`, `SESSION_TTL_SECONDS`. See `.env.example`.
+`CINC_SSL_NO_VERIFY`, `SESSION_TTL_SECONDS`, `SESSION_COOKIE_SECURE`. See
+`.env.example`.
+
+## Security invariants
+
+These are load-bearing — a change that breaks one is a vulnerability, not a bug.
+
+- **Build every request path with `` cincPath`…` `` (`lib/cinc/path.ts`).** Names
+  come from route params (Next decodes `%2F` into a real `/`) and from form
+  fields, and the path is what we *sign* — an unchecked name aims a webui-signed
+  request at an endpoint the UI never exposes, e.g. `/nodes/<name>/_acl`.
+  `CincRequestOptions.path` is a branded type, so a plain string won't compile;
+  `cincRequest` vets `org` and `user` itself.
+- **A Server Action is a public endpoint and its parameter types are erased.**
+  Validate/allowlist what you write (see `pickProfileFields` in
+  `app/profile/actions.ts`) — never spread a caller's object onto a server record.
+  Only `.bind(null, …)` arguments are protected (Next encrypts that closure).
+- **Route handlers that mint or destroy a session call `isCrossSite`**
+  (`lib/same-origin.ts`) and require `application/json`. SameSite=Lax stops a
+  cross-site POST from *sending* the cookie but not from *obtaining* one, and
+  `Request.json()` ignores Content-Type — that pair is login CSRF.
+- **The session cookie's Secure flag comes from config, never from a request
+  header.** `X-Forwarded-Proto`/`Referer` are attacker-supplied.
+- **The CSP nonce lives in `proxy.ts` and needs dynamic rendering**, pinned by
+  `export const dynamic = "force-dynamic"` in `app/layout.tsx`. A prerendered
+  page ships scripts with no nonce and the browser refuses to run them.
 
 Optional LDAP bind auth, opt-in via `AUTH_MODE=ldap` (default `local`):
 `LDAP_URL`, `LDAP_BASE_DN`, `LDAP_BIND_DN`/`LDAP_BIND_PASSWORD[_FILE]`

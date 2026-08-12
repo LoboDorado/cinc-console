@@ -24,7 +24,8 @@ vi.mock("../ldap/client", async (importOriginal) => {
   return { ...actual, ldapBind: (...a: unknown[]) => ldapBindMock(...a) };
 });
 
-import { authenticateUser, authenticate } from "./auth";
+import { authenticateUser } from "./auth";
+import { cincPath } from "./path";
 import { LdapAuthError } from "../ldap/client";
 
 beforeEach(() => {
@@ -46,7 +47,7 @@ test("returns the user (with display_name) on success", async () => {
   expect(req).toHaveBeenCalledWith(
     expect.objectContaining({
       method: "POST",
-      path: "/authenticate_user",
+      path: cincPath`/authenticate_user`,
       body: { username: "alice", password: "pw" },
     }),
   );
@@ -81,7 +82,7 @@ test("signs as authActor when configured", async () => {
   expect(req).toHaveBeenCalledWith(
     expect.objectContaining({
       user: "pivotal",
-      path: "/authenticate_user",
+      path: cincPath`/authenticate_user`,
       body: { username: "alice", password: "pw" },
     }),
   );
@@ -96,7 +97,7 @@ test("signs as username when authActor is not configured", async () => {
   expect(req).toHaveBeenCalledWith(
     expect.objectContaining({
       user: "alice",
-      path: "/authenticate_user",
+      path: cincPath`/authenticate_user`,
     }),
   );
 });
