@@ -45,6 +45,9 @@ yarn-error.log*
 # (but keep the template)
 !.npmrc.template
 
+# pnpm store
+.pnpm-store
+
 # local Helm override values (developer-specific)
 values-local.yaml
 
@@ -57,3 +60,6 @@ values-local.yaml
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local Dockerfile (developer-specific)
+Dockerfile.local

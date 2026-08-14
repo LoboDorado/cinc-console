@@ -2,11 +2,13 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  authenticateUser: vi.fn(),
+  authenticate: vi.fn(),
+  getConfig: vi.fn(),
   session: { username: "", displayName: "", loginAt: 0, save: vi.fn() },
 }));
 
-vi.mock("@/lib/cinc/auth", () => ({ authenticateUser: mocks.authenticateUser }));
+vi.mock("@/lib/cinc/auth", () => ({ authenticate: mocks.authenticate }));
+vi.mock("@/lib/config", () => ({ getConfig: mocks.getConfig }));
 vi.mock("@/lib/session", () => ({
   getSession: async () => mocks.session,
   cookieSecure: () => true,
@@ -37,7 +39,8 @@ const jsonHeaders = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.authenticateUser.mockResolvedValue({ username: "anna", display_name: "Anna" });
+  mocks.getConfig.mockReturnValue({ authMode: "local" });
+  mocks.authenticate.mockResolvedValue({ username: "anna", displayName: "Anna" });
 });
 
 test("the console's own login succeeds and seeds the session", async () => {
@@ -54,7 +57,7 @@ test("a cross-site login attempt is rejected before credentials are used", async
     login({ ...jsonHeaders, origin: "https://evil.example", "sec-fetch-site": "cross-site" }),
   );
   expect(res.status).toBe(403);
-  expect(mocks.authenticateUser).not.toHaveBeenCalled();
+  expect(mocks.authenticate).not.toHaveBeenCalled();
   expect(mocks.session.save).not.toHaveBeenCalled();
 });
 
@@ -68,17 +71,17 @@ test("a text/plain body is refused (the no-preflight CSRF shape)", async () => {
     ),
   );
   expect(res.status).toBe(415);
-  expect(mocks.authenticateUser).not.toHaveBeenCalled();
+  expect(mocks.authenticate).not.toHaveBeenCalled();
 });
 
 test("non-string credentials are rejected, not passed through", async () => {
   const res = await POST(login(jsonHeaders, { username: { toString: 1 }, password: 5 }));
   expect(res.status).toBe(400);
-  expect(mocks.authenticateUser).not.toHaveBeenCalled();
+  expect(mocks.authenticate).not.toHaveBeenCalled();
 });
 
 test("bad credentials give 401 and no session", async () => {
-  mocks.authenticateUser.mockResolvedValue(null);
+  mocks.authenticate.mockResolvedValue(null);
   const res = await POST(login(jsonHeaders));
   expect(res.status).toBe(401);
   expect(mocks.session.save).not.toHaveBeenCalled();

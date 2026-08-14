@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateUser } from "@/lib/cinc/auth";
+import { authenticate } from "@/lib/cinc/auth";
+import { getConfig } from "@/lib/config";
 import { getSession, cookieSecure } from "@/lib/session";
 import { isCrossSite } from "@/lib/same-origin";
 import { log } from "@/lib/log";
@@ -29,9 +30,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing credentials" }, { status: 400 });
   }
 
-  const authUser = await authenticateUser(username, password);
-  if (!authUser) {
-    log.warn("login.failed", { user: username });
+  const { authMode } = getConfig();
+  const authResult = await authenticate(username, password);
+  if (!authResult) {
+    log.warn("login.failed", { user: username, authMode });
     return NextResponse.json(
       { error: "invalid username or password" },
       { status: 401 },
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const session = await getSession();
   session.username = username;
-  session.displayName = authUser.display_name || username;
+  session.displayName = authResult.displayName || username;
   session.loginAt = Date.now();
 
   try {

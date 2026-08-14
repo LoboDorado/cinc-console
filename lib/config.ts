@@ -17,7 +17,41 @@ const schema = z.object({
   CHEF_VERSION: z.string().optional(),
   // Optional actor for POST /authenticate_user fallback when impersonated user gets 403
   CINC_AUTH_ACTOR: z.string().optional(),
+
+  // How login credentials are verified. "local" (default) asks the Cinc
+  // server's own /authenticate_user; "ldap" binds against an external
+  // directory instead (see lib/ldap/client.ts). Either way, the submitted
+  // username must already exist as a Cinc/Chef user object — impersonation
+  // (X-Ops-UserId) is keyed by that username regardless of how it was proven.
+  AUTH_MODE: z.enum(["local", "ldap"]).optional(),
+  LDAP_URL: z.string().optional(),
+  LDAP_BASE_DN: z.string().optional(),
+  // Service-account bind for the search phase. Optional as a *pair* — some
+  // directories permit an anonymous search bind — but set both or neither.
+  LDAP_BIND_DN: z.string().optional(),
+  LDAP_BIND_PASSWORD: z.string().optional(),
+  LDAP_BIND_PASSWORD_FILE: z.string().optional(),
+  // {{username}} is substituted with the escaped, submitted username — never
+  // sprintf'd — so escaping only ever touches untrusted input.
+  LDAP_USER_FILTER: z.string().optional(),
+  LDAP_SEARCH_TIMEOUT_MS: z.coerce.number().optional(),
+  LDAP_TLS_NO_VERIFY: z.enum(["true", "false"]).optional(),
+  // Separate from CINC_CA_CERT: the directory and the Cinc server are
+  // commonly different PKI trust roots.
+  LDAP_CA_CERT: z.string().optional(),
+  LDAP_CA_CERT_FILE: z.string().optional(),
 });
+
+export type LdapConfig = {
+  url: string;
+  baseDn: string;
+  bindDn?: string;
+  bindPassword?: string;
+  userFilter: string;
+  searchTimeoutMs: number;
+  tlsNoVerify: boolean;
+  caCert?: string;
+};
 
 export type Config = {
   serverUrl: string;
@@ -30,6 +64,9 @@ export type Config = {
   cookieSecure?: boolean;
   chefVersion: string;
   authActor?: string;
+  authMode: "local" | "ldap";
+  /** Present only when authMode === "ldap". */
+  ldap?: LdapConfig;
 };
 
 function readPem(path: string, label: string): string {
@@ -63,6 +100,27 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     caCert = readPem(env.CINC_CA_CERT_FILE, "CINC_CA_CERT_FILE");
   }
 
+  const authMode = env.AUTH_MODE === "ldap" ? "ldap" : "local";
+  let ldapCaCert = env.LDAP_CA_CERT;
+  let ldapBindPassword = env.LDAP_BIND_PASSWORD;
+  if (authMode === "ldap") {
+    if (!env.LDAP_URL) issues.push("LDAP_URL: required when AUTH_MODE=ldap");
+    if (!env.LDAP_BASE_DN) issues.push("LDAP_BASE_DN: required when AUTH_MODE=ldap");
+
+    if (!ldapCaCert && env.LDAP_CA_CERT_FILE) {
+      ldapCaCert = readPem(env.LDAP_CA_CERT_FILE, "LDAP_CA_CERT_FILE");
+    }
+
+    if (!ldapBindPassword && env.LDAP_BIND_PASSWORD_FILE) {
+      ldapBindPassword = readPem(env.LDAP_BIND_PASSWORD_FILE, "LDAP_BIND_PASSWORD_FILE");
+    }
+    const hasBindDn = !!env.LDAP_BIND_DN;
+    const hasBindPassword = !!ldapBindPassword;
+    if (hasBindDn !== hasBindPassword) {
+      issues.push("LDAP_BIND_DN/LDAP_BIND_PASSWORD: set both or neither (anonymous search bind is allowed)");
+    }
+  }
+
   if (!r.success || issues.length) {
     throw new Error(`Invalid cinc-console configuration — ${issues.join("; ")}`);
   }
@@ -80,6 +138,20 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
         : e.SESSION_COOKIE_SECURE === "true",
     chefVersion: e.CHEF_VERSION ?? "16.0.0",
     authActor: e.CINC_AUTH_ACTOR,
+    authMode,
+    ldap:
+      authMode === "ldap"
+        ? {
+            url: e.LDAP_URL!,
+            baseDn: e.LDAP_BASE_DN!,
+            bindDn: e.LDAP_BIND_DN,
+            bindPassword: ldapBindPassword,
+            userFilter: e.LDAP_USER_FILTER ?? "(uid={{username}})",
+            searchTimeoutMs: e.LDAP_SEARCH_TIMEOUT_MS ?? 5000,
+            tlsNoVerify: e.LDAP_TLS_NO_VERIFY === "true",
+            caCert: ldapCaCert,
+          }
+        : undefined,
   };
 }
 

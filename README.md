@@ -22,6 +22,11 @@ gates editing in the UI, exactly as it would for `knife`.
 - **v1.3 signing.** The signing module is a faithful port of the Go
   [`cinc-api`](https://github.com/tas50/cinc-api) implementation, pinned by a
   byte-for-byte conformance test.
+- **Pluggable authentication.** Local login checks the password against the
+  Cinc server's own `/authenticate_user` by default; optionally bind against
+  an external directory instead (`AUTH_MODE=ldap`). Either way, the console
+  still impersonates the same Cinc user object - LDAP only replaces the
+  password check, it never provisions users.
 
 ## Object scope
 
@@ -47,8 +52,10 @@ private key is shown once at creation and is never retrievable again).
 | `CINC_CA_CERT_FILE` | no | Path to a CA bundle (PEM) to trust a self-signed server |
 | `CINC_SSL_NO_VERIFY` | no | `true` to skip TLS verification (dev only) |
 | `SESSION_TTL_SECONDS` | no | Session lifetime, default `28800` (8h) |
+| `SESSION_COOKIE_SECURE` | no | `Secure` flag on the session cookie. Unset follows `NODE_ENV` (on in production); set to `false` only for a deliberate plain-HTTP deployment |
 | `CHEF_VERSION` | no | API version header sent to the server, default `16.0.0` |
 | `CINC_AUTH_ACTOR` | no | Globally-privileged actor (for example `pivotal`) used for `POST /authenticate_user` on servers that require global create permissions |
+| `AUTH_MODE` | no | `local` (default) or `ldap`. When `ldap`, see `LDAP_URL`/`LDAP_BASE_DN`/etc. in `.env.example` for the full set of directory-bind options |
 
 The app validates these at boot and exits with a clear message if a required
 value is missing. For local development, copy `.env.example` to `.env.local`
@@ -127,6 +134,11 @@ pnpm build                   # production build
 - The webui key is a powerful credential — it can act as any user. Keep it in a
   Kubernetes Secret (or `existingSecret`), never in the image or client bundle.
 - Serve the console over TLS; the session cookie is `HttpOnly` + `Secure` in
-  production.
+  production (config-driven via `SESSION_COOKIE_SECURE`, never inferred from a
+  request header).
 - Authorization is always the cinc server's. The console pre-disables some
   controls as a convenience but never substitutes its own permission decisions.
+- Login and logout are CSRF-guarded (reject cross-site requests, require
+  `application/json`), every signed request path is built through a branded
+  helper that rejects unsanitized names, and a Content-Security-Policy plus a
+  standard set of security response headers apply to every route.

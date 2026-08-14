@@ -64,6 +64,9 @@ lib/cinc/            server-only Cinc client (NEVER import into a client compone
   action.ts          runAction() maps CincError -> { ok } | { error } (403 -> "forbidden")
   safe-get.ts        safeGet() for reads; explainRead() for messages
   auth.ts orgs.ts databags.ts members.ts readonly.ts acl.ts
+    (auth.ts's authenticate() branches on AUTH_MODE: local /authenticate_user
+     vs. lib/ldap/client.ts, below)
+lib/ldap/client.ts   server-only LDAP client: search-then-bind (AUTH_MODE=ldap)
 lib/config.ts        fail-fast zod env validation (getConfig)
 lib/session.ts       stateless encrypted iron-session cookie (username only)
 lib/guard.ts         currentUser() — redirects to /login in a Server Component
@@ -92,13 +95,18 @@ permission" (it never substitutes its own check).
 
 ## Dependency overrides
 
-`package.json` `pnpm.overrides` forces patched versions of transitive packages
-whose parent pins a vulnerable range — currently `postcss` and `sharp`, both
-pinned by `next` (`postcss 8.4.31` exactly, `sharp ^0.34.5`), so no `next`
-upgrade fixes them. Each override is scoped to the vulnerable range
+`pnpm-workspace.yaml`'s `overrides` forces patched versions of transitive
+packages whose parent pins a vulnerable range — currently `postcss` and
+`sharp`, both pinned by `next` (`postcss 8.4.31` exactly, `sharp ^0.34.5`), so
+no `next` upgrade fixes them. Each override is scoped to the vulnerable range
 (`"postcss@<8.5.18": ">=8.5.18"`), so it stops applying once upstream catches
 up. Drop an entry when `next` bumps its own pin past the advisory; check with
 `pnpm why <pkg>` and `pnpm audit`.
+
+Note: pnpm 10 moved `overrides` (and other package-manager settings) out of
+`package.json`'s `pnpm` key into `pnpm-workspace.yaml` — an override left in
+`package.json` is silently ignored (`pnpm install` warns "no longer read")
+rather than erroring, so it's easy to edit the wrong file without noticing.
 
 ## Accessibility
 
@@ -160,6 +168,17 @@ These are load-bearing — a change that breaks one is a vulnerability, not a bu
 - **The CSP nonce lives in `proxy.ts` and needs dynamic rendering**, pinned by
   `export const dynamic = "force-dynamic"` in `app/layout.tsx`. A prerendered
   page ships scripts with no nonce and the browser refuses to run them.
+
+Optional LDAP bind auth, opt-in via `AUTH_MODE=ldap` (default `local`):
+`LDAP_URL`, `LDAP_BASE_DN`, `LDAP_BIND_DN`/`LDAP_BIND_PASSWORD[_FILE]`
+(anonymous search bind if both are unset), `LDAP_USER_FILTER` (default
+`(uid={{username}})`), `LDAP_SEARCH_TIMEOUT_MS`, `LDAP_TLS_NO_VERIFY`,
+`LDAP_CA_CERT[_FILE]`. LDAP only replaces the password check — it never
+provisions Cinc users. The submitted username must already exist as a Cinc
+user object (impersonation is keyed by that username regardless of auth
+method); a bind that succeeds against an unprovisioned username fails the
+login with a distinct `auth.ldap_ok_no_chef_user` log line, not "bad
+password".
 
 ## Local testing against cinc-zero
 

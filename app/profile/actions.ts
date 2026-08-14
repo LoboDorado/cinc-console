@@ -3,6 +3,7 @@
 import { getSession, requireUser } from "@/lib/session";
 import { getUser, putUser } from "@/lib/cinc/users";
 import { runAction, type ActionResult } from "@/lib/cinc/action";
+import { getConfig } from "@/lib/config";
 
 export type ProfileDetails = {
   display_name?: string;
@@ -54,6 +55,12 @@ export async function saveProfile(
 /** Change the logged-in user's web-login password. */
 export async function changePassword(password: string): Promise<ActionResult> {
   const user = await requireUser();
+  // LDAP-authenticated users have no Chef-side password to change — the
+  // directory is authoritative. Guard the action itself (not just the UI)
+  // in case it's ever invoked directly.
+  if (getConfig().authMode === "ldap") {
+    return { error: "password is managed by your organization's directory" };
+  }
   // Same reasoning as pickProfileFields: the `string` annotation is not a runtime
   // check, and `(5).length < 6` is false — a non-string would sail past it.
   if (typeof password !== "string" || password.length < 6) {

@@ -18,7 +18,7 @@ WORKDIR /app
 COPY .npmrc* /root/
 
 RUN npm install -g corepack@latest && corepack enable
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Configure npm from .npmrc, then pre-install the package.json-pinned pnpm
 # version to avoid Corepack download issues with some private registries.
 RUN sh -c 'if [ -f /root/.npmrc ]; then \

@@ -54,7 +54,13 @@ function StatusLine({ status }: { status: Status }) {
   );
 }
 
-export function ProfileForm({ initial }: { initial: User }) {
+export function ProfileForm({
+  initial,
+  authMode,
+}: {
+  initial: User;
+  authMode: "local" | "ldap";
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -122,29 +128,39 @@ export function ProfileForm({ initial }: { initial: User }) {
         </form>
       </Card>
 
-      <Card>
-        <form onSubmit={submitPassword} className="space-y-4">
+      {authMode === "ldap" ? (
+        <Card>
           <h2 className="font-medium">Change password</h2>
-          <Field
-            label="New password"
-            value={pw}
-            onChange={setPw}
-            type="password"
-            autoComplete="new-password"
-          />
-          <Field
-            label="Confirm password"
-            value={pw2}
-            onChange={setPw2}
-            type="password"
-            autoComplete="new-password"
-          />
-          <StatusLine status={pwStatus} />
-          <Button type="submit" disabled={pending || !pw}>
-            Change password
-          </Button>
-        </form>
-      </Card>
+          <p className="mt-2 text-sm text-muted">
+            Your password is managed by your organization&rsquo;s directory.
+            Contact your administrator to change it.
+          </p>
+        </Card>
+      ) : (
+        <Card>
+          <form onSubmit={submitPassword} className="space-y-4">
+            <h2 className="font-medium">Change password</h2>
+            <Field
+              label="New password"
+              value={pw}
+              onChange={setPw}
+              type="password"
+              autoComplete="new-password"
+            />
+            <Field
+              label="Confirm password"
+              value={pw2}
+              onChange={setPw2}
+              type="password"
+              autoComplete="new-password"
+            />
+            <StatusLine status={pwStatus} />
+            <Button type="submit" disabled={pending || !pw}>
+              Change password
+            </Button>
+          </form>
+        </Card>
+      )}
     </div>
   );
 }
