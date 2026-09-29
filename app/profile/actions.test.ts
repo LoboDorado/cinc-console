@@ -19,7 +19,7 @@ vi.mock("@/lib/cinc/users", () => ({ getUser, putUser }));
 const { getConfigMock } = vi.hoisted(() => ({ getConfigMock: vi.fn() }));
 vi.mock("@/lib/config", () => ({ getConfig: () => getConfigMock() }));
 
-import { saveProfile, changePassword } from "./actions";
+import { saveProfile, changePassword, type ProfileDetails } from "./actions";
 
 beforeEach(() => {
   getUser.mockReset();

@@ -5,7 +5,7 @@ import { CookbookConstraintsEditor } from "./cookbook-constraints-editor";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
-const onSave = vi.fn(async () => ({ ok: true as const }));
+const onSave = vi.fn(async (_json: string) => ({ ok: true as const }));
 beforeEach(() => onSave.mockClear());
 
 const data = {

@@ -25,7 +25,7 @@ afterEach(() => {
 
 test("signs as webui key impersonating the user with web source", async () => {
   const fetchMock = vi.fn(
-    async () =>
+    async (_url: string, _init?: RequestInit) =>
       new Response(JSON.stringify({ ok: 1 }), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -102,7 +102,7 @@ test("refuses to sign a path a name has broken out of", async () => {
 
 test("omits the org prefix for top-level paths", async () => {
   const fetchMock = vi.fn(
-    async () => new Response(JSON.stringify({}), { status: 200 }),
+    async (_url: string) => new Response(JSON.stringify({}), { status: 200 }),
   );
   vi.stubGlobal("fetch", fetchMock);
   await cincRequest({ user: "u", method: "POST", path: cincPath`/authenticate_user`, body: { username: "u" } });
